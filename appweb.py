@@ -4,7 +4,7 @@ from flask_wtf import FlaskForm, form
 from flask_bcrypt import Bcrypt
 from wtforms import StringField, PasswordField, SubmitField, ValidationError
 from wtforms.validators import Length, EqualTo, DataRequired
-from flask_login import LoginManager, login_user, UserMixin, logout_user
+from flask_login import LoginManager, login_user, UserMixin, logout_user, login_required
 
 import sqlalchemy
 
@@ -14,6 +14,8 @@ app.config['SECRET_KEY'] = '6f595648d8e040644de43bed'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app) 
 login_manager = LoginManager(app)
+login_manager.login_view = 'login_page'
+login_manager.login_message_category = 'info'
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -75,6 +77,7 @@ def home_page():
    return render_template('home.html')
 
 @app.route('/new', methods = ['GET', 'POST'])
+@login_required
 def new():
    if request.method == 'POST':
       Items = Item(request.form['name'], 
@@ -91,6 +94,7 @@ def new():
 
 
 @app.route('/manage')
+@login_required
 def manage_page():
    items = Item.query.all()
    return render_template('manage.html', items= items)
@@ -126,6 +130,8 @@ def register_page():
                            password=form.password1.data)
       db.session.add(user_register)
       db.session.commit()
+      login_user(user_register)
+      flash(f'Register successful, you are login as {user_register.uname}', category='success')
       return redirect(url_for('manage_page'))
    if form.errors != {}: #if there are not errors from the validations
       for err_msg in form.errors.values():
